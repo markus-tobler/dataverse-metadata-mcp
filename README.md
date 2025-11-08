@@ -44,7 +44,7 @@ This solution contains multiple components:
 
 ### DataverseMetadataMcp.Server
 
-A console application that hosts the MCP server with stdio transport. Available as a .NET global tool via GitHub Packages.
+A console application that hosts the MCP server with stdio transport. Bundled with the VS Code extension for easy deployment.
 
 ### DataverseMetadataMcp.Tools
 
@@ -58,7 +58,7 @@ A VS Code extension that automatically registers the MCP server with GitHub Copi
 
 - Automatic MCP server registration
 - Easy configuration UI
-- Support for bundled or globally installed server
+- Bundled server binaries for all platforms
 - Cross-platform support (Windows, Linux, macOS)
 
 ## Features
@@ -69,7 +69,7 @@ A VS Code extension that automatically registers the MCP server with GitHub Copi
 - **OAuth Authentication**: Supports modern authentication flows
 - **Modular Design**: Tools are separated from the server for reusability
 - **MCP Protocol**: Full compatibility with Model Context Protocol clients
-- **Global Tool**: Easy installation and updates via `dotnet tool`
+- **VS Code Integration**: Seamless integration with GitHub Copilot in VS Code
 - **Enterprise-Ready**: Security roles, solution management, and organizational insights
 
 ## Available Tools

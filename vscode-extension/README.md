@@ -7,12 +7,11 @@ This VS Code extension provides access to Power Platform Dataverse metadata thro
 - **Automatic MCP Server Registration**: Seamlessly integrates the Dataverse MCP server with VS Code
 - **GitHub Copilot Integration**: Use natural language to query and work with Dataverse metadata
 - **Easy Configuration**: Simple setup through VS Code settings
-- **Multiple Installation Options**: Bundle with extension or use globally installed .NET tool
+- **Bundled Server**: No additional installation required - server binaries included
 
 ## Requirements
 
 - Visual Studio Code 1.96.0 or later
-- .NET 9.0 SDK (if using the dotnet tool installation)
 - GitHub Copilot extension
 - Access to a Power Platform Dataverse environment
 
@@ -33,25 +32,7 @@ code --install-extension dataverse-metadata-mcp-0.1.0.vsix
 
 ## Setup
 
-### Step 1: Install the MCP Server
-
-The extension requires the `dataverse-metadata-mcp-server` to be installed. You have two options:
-
-#### Option A: Install as .NET Global Tool (Recommended)
-
-```bash
-dotnet tool install --global DataverseMetadataMcp.Server
-```
-
-#### Option B: Use Custom Server Path
-
-If you've built the server from source or have it in a custom location:
-
-1. Open VS Code Settings (Ctrl+,)
-2. Search for "Dataverse Metadata MCP"
-3. Set "Server Path" to your executable location
-
-### Step 2: Configure Dataverse Connection
+### Configure Dataverse Connection
 
 1. Open the Command Palette (Ctrl+Shift+P)
 2. Run "Dataverse MCP: Configure Dataverse Connection"
@@ -131,18 +112,11 @@ See [AUTOMATED-RELEASES.md](AUTOMATED-RELEASES.md) for the automated release pro
 
 ### Server Not Found
 
-If the extension cannot find the MCP server:
+The extension includes bundled server binaries for your platform. If you encounter issues:
 
-1. Verify the server is installed:
-
-   ```bash
-   dotnet tool list --global
-   ```
-
-2. Or set a custom path in settings:
-   - Open Settings (Ctrl+,)
-   - Search for "Dataverse Metadata MCP: Server Path"
-   - Set the full path to your `dataverse-metadata-mcp-server` executable
+1. Check the VS Code Output panel for error messages
+2. Verify the extension is properly installed
+3. Try reloading VS Code window (Ctrl+Shift+P → "Developer: Reload Window")
 
 ### Connection Issues
 

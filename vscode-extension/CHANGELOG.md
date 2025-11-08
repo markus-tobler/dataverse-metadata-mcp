@@ -2,7 +2,7 @@
 
 All notable changes to the "dataverse-metadata-mcp" extension will be documented in this file.
 
-## [0.1.1] - 2024-11-08
+## [0.1.3] - 2024-11-08
 
 ### Added
 

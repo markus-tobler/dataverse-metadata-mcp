@@ -42,24 +42,7 @@ This guide helps you test the Dataverse Metadata MCP extension before publishing
 - Message: "Dataverse Metadata MCP extension is now active"
 - No errors in output
 
-### Test 3: Server Detection (Without Global Tool)
-
-**Steps:**
-
-1. Ensure .NET tool is NOT installed:
-   ```bash
-   dotnet tool uninstall --global DataverseMetadataMcp.Server
-   ```
-2. Open VS Code
-3. Check for notification
-
-**Expected Result:**
-
-- Warning message about server not installed
-- Option to "Show Instructions" or "Dismiss"
-- Instructions document opens if selected
-
-### Test 4: Configuration Command
+### Test 3: Configuration Command
 
 **Steps:**
 
@@ -78,7 +61,7 @@ This guide helps you test the Dataverse Metadata MCP extension before publishing
 - Success message after saving
 - Setting saved to VS Code settings
 
-### Test 5: Settings UI
+### Test 4: Settings UI
 
 **Steps:**
 
@@ -96,25 +79,22 @@ This guide helps you test the Dataverse Metadata MCP extension before publishing
 
 **Steps:**
 
-1. Install the MCP server:
-   ```bash
-   dotnet tool install --global DataverseMetadataMcp.Server
-   ```
-2. Restart VS Code
-3. Open Command Palette → "Dataverse MCP: Refresh MCP Servers"
+1. Open Settings (Ctrl+,)
+2. Search for "Dataverse Metadata MCP"
+3. Verify all settings appear
 
 **Expected Result:**
 
-- No warning about missing server
-- Server detected in global tools
-- Refresh message confirms update
+- `enabled`: Boolean toggle (default: true)
+- `connectionString`: String input (shows configured value)
+- `serverPath`: String input (default: empty)
 
-### Test 7: MCP Server Registration with Copilot
+### Test 5: MCP Server Registration with Copilot
 
 **Steps:**
 
 1. Ensure connection string is configured
-2. Ensure server is installed
+2. Ensure extension is activated
 3. Open any file in workspace
 4. Open GitHub Copilot chat
 5. Ask: "List all tables in my Dataverse environment"
@@ -126,7 +106,7 @@ This guide helps you test the Dataverse Metadata MCP extension before publishing
 - Copilot returns list of Dataverse tables
 - No error messages
 
-### Test 8: Authentication Flow
+### Test 6: Authentication Flow
 
 **Steps:**
 

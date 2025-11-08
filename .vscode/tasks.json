@@ -54,38 +54,6 @@
       "problemMatcher": "$msCompile"
     },
     {
-      "label": "pack",
-      "command": "dotnet",
-      "type": "process",
-      "args": [
-        "pack",
-        "${workspaceFolder}/DataverseMetadataMcp.Server/DataverseMetadataMcp.Server.csproj",
-        "-c",
-        "Release",
-        "-o",
-        "${workspaceFolder}/packages"
-      ],
-      "problemMatcher": "$msCompile",
-      "group": "build"
-    },
-    {
-      "label": "install-local",
-      "command": "dotnet",
-      "type": "process",
-      "args": [
-        "tool",
-        "install",
-        "--global",
-        "DataverseMetadataMcp.Server",
-        "--add-source",
-        "${workspaceFolder}/packages",
-        "--version",
-        "1.0.0"
-      ],
-      "dependsOn": "pack",
-      "problemMatcher": []
-    },
-    {
       "label": "test",
       "command": "dotnet",
       "type": "process",
