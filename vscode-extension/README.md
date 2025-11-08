@@ -125,9 +125,7 @@ vsce package
 
 ### Publishing
 
-```bash
-vsce publish
-```
+See [AUTOMATED-RELEASES.md](AUTOMATED-RELEASES.md) for the automated release process.
 
 ## Troubleshooting
 

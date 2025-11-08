@@ -112,14 +112,23 @@ jobs:
         id: version
         working-directory: vscode-extension
         run: |
+          # Always read version from package.json for consistency
+          PACKAGE_VERSION=$(jq -r '.version' package.json)
+
           if [ "${{ github.event_name }}" == "push" ]; then
-            # Extract version from tag (v1.2.3 -> 1.2.3)
-            VERSION=${GITHUB_REF#refs/tags/v}
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            # Verify tag matches package.json
+            TAG_VERSION=${GITHUB_REF#refs/tags/v}
+            if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
+              echo "::error::Tag version ($TAG_VERSION) doesn't match package.json ($PACKAGE_VERSION)"
+              exit 1
+            fi
+            echo "version=$PACKAGE_VERSION" >> $GITHUB_OUTPUT
+            echo "✅ Using version from package.json: $PACKAGE_VERSION (matches tag)"
           else
-            # Use workflow input
+            # Manual trigger - use workflow input
             VERSION="${{ github.event.inputs.version }}"
             echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "⚠️  Manual trigger - version: $VERSION"
           fi
 
       - name: Package extension
@@ -128,7 +137,14 @@ jobs:
 
       - name: Publish to VS Code Marketplace
         working-directory: vscode-extension
-        run: npx vsce publish ${{ steps.version.outputs.version }} --no-dependencies -p ${{ secrets.VSCE_PAT }}
+        run: |
+          if [ "${{ github.event_name }}" == "push" ]; then
+            # For automated releases, package.json already has correct version
+            npx vsce publish --no-dependencies -p ${{ secrets.VSCE_PAT }}
+          else
+            # For manual triggers, specify version
+            npx vsce publish ${{ steps.version.outputs.version }} --no-dependencies -p ${{ secrets.VSCE_PAT }}
+          fi
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 

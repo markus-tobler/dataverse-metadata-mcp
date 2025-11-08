@@ -1,0 +1,78 @@
+name: Auto Release on Merge
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "vscode-extension/package.json"
+
+jobs:
+  create-release:
+    name: Create Release and Publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to create tags and releases
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from package.json
+        id: package-version
+        run: |
+          VERSION=$(jq -r '.version' vscode-extension/package.json)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Version: $VERSION"
+
+      - name: Check if tag exists
+        id: check-tag
+        run: |
+          if git rev-parse "v${{ steps.package-version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "⚠️  Tag v${{ steps.package-version.outputs.version }} already exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "✅ Tag v${{ steps.package-version.outputs.version }} does not exist yet"
+          fi
+
+      - name: Extract changelog for this version
+        id: changelog
+        if: steps.check-tag.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.package-version.outputs.version }}"
+
+          # Extract changelog section for this version
+          if [ -f "vscode-extension/CHANGELOG.md" ]; then
+            # Get content between ## [VERSION] and next ## or end of file
+            NOTES=$(awk "/## \[$VERSION\]/,/## \[/{if(/## \[/ && !/## \[$VERSION\]/)exit;print}" vscode-extension/CHANGELOG.md | sed '1d')
+            
+            if [ -z "$NOTES" ]; then
+              NOTES="Release version $VERSION"
+            fi
+            
+            # Save to file for multi-line output
+            echo "$NOTES" > release-notes.txt
+            echo "✅ Extracted changelog for version $VERSION"
+          else
+            echo "Release version $VERSION" > release-notes.txt
+            echo "⚠️  No CHANGELOG.md found"
+          fi
+
+      - name: Create and push tag
+        if: steps.check-tag.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.package-version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$VERSION" -m "Release v$VERSION"
+          git push origin "v$VERSION"
+          echo "✅ Created and pushed tag v$VERSION"
+
+      - name: Trigger publish workflow
+        if: steps.check-tag.outputs.exists == 'false'
+        run: |
+          echo "✅ Tag pushed - publish workflow will be triggered automatically"
+          echo "The 'Publish Extension to Marketplace' workflow will handle the build and publish"

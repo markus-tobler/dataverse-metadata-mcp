@@ -10,15 +10,14 @@ A complete VS Code extension that registers your Dataverse MCP server with GitHu
 vscode-extension/
 ├── src/
 │   └── extension.ts              # Main extension implementation
-├── scripts/
-│   ├── build-with-server.ps1     # Build extension with bundled server
-│   ├── publish.ps1               # Publish to VS Code Marketplace
-│   ├── install-local.ps1         # Install extension locally
-│   └── create-icon.ps1           # Generate extension icon
 ├── .vscode/
 │   ├── launch.json               # Debug configuration
 │   ├── tasks.json                # Build tasks
 │   └── settings.json             # Workspace settings
+├── .github/workflows/            # Automated release workflows
+│   ├── validate-version.yml      # PR version validation
+│   ├── auto-release.yml          # Auto-create tags on merge
+│   └── publish-extension.yml     # Publish to marketplace
 ├── dist/                         # Compiled JavaScript
 ├── package.json                  # Extension manifest
 ├── tsconfig.json                 # TypeScript configuration
@@ -28,8 +27,7 @@ vscode-extension/
 ├── README.md                     # User documentation
 ├── CHANGELOG.md                  # Version history
 ├── DEVELOPMENT.md                # Developer guide
-├── PUBLISHING.md                 # Publishing instructions
-└── ICON.md                       # Icon creation guide
+└── AUTOMATED-RELEASES.md         # Automated release process
 ```
 
 ## Key Features Implemented
@@ -159,36 +157,13 @@ Result: ~50-100 MB .vsix file (includes .NET runtime dependencies for all platfo
 
 ## Publishing to Marketplace
 
-### Prerequisites
+The extension uses an **automated release process** via GitHub Actions:
 
-1. Microsoft account
-2. Azure DevOps organization
-3. Publisher ID: `markus-tobler` (already in package.json)
-4. Personal Access Token with Marketplace (Manage) scope
+1. **Create PR** with version bump in `package.json` and updated `CHANGELOG.md`
+2. **PR validation** ensures version is bumped
+3. **Merge to main** → Automatic tag creation → Automatic publish to marketplace
 
-### Steps
-
-1. **Login**:
-
-   ```bash
-   npx vsce login markus-tobler
-   ```
-
-2. **Publish**:
-
-   ```bash
-   npx vsce publish
-   ```
-
-   Or use the script:
-
-   ```powershell
-   .\scripts\publish.ps1 -Version "0.1.0"
-   ```
-
-3. **Verify**: Check [VS Code Marketplace](https://marketplace.visualstudio.com/)
-
-See [PUBLISHING.md](PUBLISHING.md) for detailed instructions.
+See [AUTOMATED-RELEASES.md](AUTOMATED-RELEASES.md) for detailed instructions.
 
 ## Configuration for End Users
 

@@ -166,31 +166,16 @@ This creates `dataverse-metadata-mcp-0.1.0.vsix`.
 code --install-extension dataverse-metadata-mcp-0.1.0.vsix
 ```
 
-Or use the script:
-
-```powershell
-.\scripts\install-local.ps1
-```
-
 ## Publishing to Marketplace
 
-See [PUBLISHING.md](./PUBLISHING.md) for detailed instructions.
+See [AUTOMATED-RELEASES.md](./AUTOMATED-RELEASES.md) for the automated release process.
 
-### Quick Publish
+### Quick Overview
 
-```powershell
-# Login (first time only)
-npx vsce login markus-tobler
-
-# Publish
-npx vsce publish patch  # or minor, major, or specific version
-```
-
-Or use the script:
-
-```powershell
-.\scripts\publish.ps1 -Version "0.2.0"
-```
+1. Update version in `package.json`
+2. Update `CHANGELOG.md`
+3. Create PR to `main`
+4. Merge PR → Automatic release and publish! ✨
 
 ## Troubleshooting
 

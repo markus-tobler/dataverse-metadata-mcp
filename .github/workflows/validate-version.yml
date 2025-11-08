@@ -1,0 +1,70 @@
+name: Validate Version Bump
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "vscode-extension/package.json"
+
+jobs:
+  validate-version:
+    name: Validate Version Bump
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get PR version
+        id: pr-version
+        run: |
+          PR_VERSION=$(jq -r '.version' vscode-extension/package.json)
+          echo "version=$PR_VERSION" >> $GITHUB_OUTPUT
+          echo "📦 PR Version: $PR_VERSION"
+
+      - name: Get main version
+        id: main-version
+        run: |
+          git checkout origin/main -- vscode-extension/package.json
+          MAIN_VERSION=$(jq -r '.version' vscode-extension/package.json)
+          echo "version=$MAIN_VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Main Version: $MAIN_VERSION"
+          git checkout HEAD -- vscode-extension/package.json
+
+      - name: Compare versions
+        run: |
+          PR_VERSION="${{ steps.pr-version.outputs.version }}"
+          MAIN_VERSION="${{ steps.main-version.outputs.version }}"
+
+          echo "Comparing versions:"
+          echo "  Main:    $MAIN_VERSION"
+          echo "  PR:      $PR_VERSION"
+
+          # Simple version comparison using sort -V
+          if [ "$PR_VERSION" = "$MAIN_VERSION" ]; then
+            echo "❌ Error: Version must be bumped in package.json"
+            echo "Current version on main: $MAIN_VERSION"
+            echo "PR version: $PR_VERSION"
+            exit 1
+          fi
+
+          # Check if PR version is greater than main version
+          GREATER=$(printf '%s\n%s\n' "$MAIN_VERSION" "$PR_VERSION" | sort -V | tail -n1)
+          if [ "$GREATER" != "$PR_VERSION" ]; then
+            echo "❌ Error: PR version ($PR_VERSION) must be greater than main version ($MAIN_VERSION)"
+            exit 1
+          fi
+
+          echo "✅ Version bump validated: $MAIN_VERSION → $PR_VERSION"
+
+      - name: Check for changelog update
+        run: |
+          if ! git diff origin/main...HEAD --name-only | grep -q "vscode-extension/CHANGELOG.md"; then
+            echo "⚠️  Warning: CHANGELOG.md was not updated"
+            echo "::warning::Please update CHANGELOG.md with release notes"
+          else
+            echo "✅ CHANGELOG.md updated"
+          fi
