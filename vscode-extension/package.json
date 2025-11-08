@@ -1,0 +1,101 @@
+{
+  "name": "dataverse-metadata-mcp",
+  "displayName": "Dataverse Metadata MCP Server",
+  "description": "MCP server for accessing Power Platform Dataverse metadata through GitHub Copilot",
+  "version": "0.1.1",
+  "publisher": "markus-tobler",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/markus-tobler/dataverse-metadata-mcp"
+  },
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "keywords": [
+    "mcp",
+    "dataverse",
+    "power-platform",
+    "metadata",
+    "copilot"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "dataverse-metadata-mcp.servers",
+        "label": "Dataverse Metadata MCP"
+      }
+    ],
+    "configuration": {
+      "title": "Dataverse Metadata MCP",
+      "properties": {
+        "dataverseMetadataMcp.connectionString": {
+          "type": "string",
+          "default": "",
+          "description": "Dataverse connection string (e.g., AuthType=OAuth;Url=https://yourorg.crm.dynamics.com/;Username=your@email.com;ClientId=your-client-id;LoginPrompt=Auto;RedirectUri=http://localhost/)",
+          "markdownDescription": "Connection string for Dataverse. See [documentation](https://github.com/markus-tobler/dataverse-metadata-mcp) for format details."
+        },
+        "dataverseMetadataMcp.serverPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the dataverse-metadata-mcp-server executable. Leave empty to use the bundled server or globally installed dotnet tool.",
+          "markdownDescription": "Custom path to `dataverse-metadata-mcp-server`. If empty, the extension will use the bundled server or look for the global dotnet tool."
+        },
+        "dataverseMetadataMcp.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable the Dataverse Metadata MCP server"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "dataverseMetadataMcp.configure",
+        "title": "Configure Dataverse Connection",
+        "category": "Dataverse MCP"
+      },
+      {
+        "command": "dataverseMetadataMcp.refreshServers",
+        "title": "Refresh MCP Servers",
+        "category": "Dataverse MCP"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "npm run check-types && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "npm run check-types && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.96.0",
+    "@typescript-eslint/eslint-plugin": "^8.17.0",
+    "@typescript-eslint/parser": "^8.17.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.2.1",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.15.0",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.7.2"
+  },
+  "icon": "icon.png",
+  "license": "MIT"
+}

@@ -1,0 +1,144 @@
+name: Extension CI
+
+on:
+  push:
+    branches: [main, develop, feature/*]
+    paths:
+      - "vscode-extension/**"
+      - "DataverseMetadataMcp.Server/**"
+      - "DataverseMetadataMcp.Tools/**"
+      - ".github/workflows/extension-ci.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "vscode-extension/**"
+      - "DataverseMetadataMcp.Server/**"
+      - "DataverseMetadataMcp.Tools/**"
+
+jobs:
+  build-and-test:
+    name: Build and Test Extension
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: [20.x]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm"
+          cache-dependency-path: vscode-extension/package-lock.json
+
+      - name: Build MCP Server (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          dotnet publish DataverseMetadataMcp.Server/DataverseMetadataMcp.Server.csproj `
+            -c Release `
+            -r win-x64 `
+            --self-contained false `
+            -o vscode-extension/server/win-x64 `
+            /p:PublishSingleFile=true `
+            /p:DebugType=None `
+            /p:DebugSymbols=false
+
+      - name: Build MCP Server (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          dotnet publish DataverseMetadataMcp.Server/DataverseMetadataMcp.Server.csproj \
+            -c Release \
+            -r linux-x64 \
+            --self-contained false \
+            -o vscode-extension/server/linux-x64 \
+            /p:PublishSingleFile=true \
+            /p:DebugType=None \
+            /p:DebugSymbols=false
+
+      - name: Build MCP Server (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          dotnet publish DataverseMetadataMcp.Server/DataverseMetadataMcp.Server.csproj \
+            -c Release \
+            -r osx-x64 \
+            --self-contained false \
+            -o vscode-extension/server/osx-x64 \
+            /p:PublishSingleFile=true \
+            /p:DebugType=None \
+            /p:DebugSymbols=false
+
+      - name: Make binary executable (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          if [ "$RUNNER_OS" == "Linux" ]; then
+            chmod +x vscode-extension/server/linux-x64/DataverseMetadataMcp.Server
+          elif [ "$RUNNER_OS" == "macOS" ]; then
+            chmod +x vscode-extension/server/osx-x64/DataverseMetadataMcp.Server
+          fi
+
+      - name: Install extension dependencies
+        working-directory: vscode-extension
+        run: npm ci
+
+      - name: Lint extension code
+        working-directory: vscode-extension
+        run: npm run lint
+
+      - name: Type check
+        working-directory: vscode-extension
+        run: npm run check-types
+
+      - name: Run tests
+        working-directory: vscode-extension
+        run: npm test
+        continue-on-error: true # Remove this once you have tests
+
+      - name: Build extension
+        working-directory: vscode-extension
+        run: npm run package
+
+      - name: Package extension
+        working-directory: vscode-extension
+        run: npx vsce package --no-dependencies
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        if: matrix.os == 'ubuntu-latest'
+        with:
+          name: extension-vsix-${{ github.sha }}
+          path: vscode-extension/*.vsix
+          retention-days: 7
+
+  validate-package:
+    name: Validate Package
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download VSIX
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-vsix-${{ github.sha }}
+
+      - name: Check package size
+        run: |
+          SIZE=$(stat -f%z *.vsix 2>/dev/null || stat -c%s *.vsix)
+          echo "Package size: $SIZE bytes"
+          # Warn if package is larger than 50MB
+          if [ $SIZE -gt 52428800 ]; then
+            echo "::warning::Package size is larger than 50MB. Consider optimizing."
+          fi
+
+      - name: List package contents
+        run: |
+          unzip -l *.vsix
