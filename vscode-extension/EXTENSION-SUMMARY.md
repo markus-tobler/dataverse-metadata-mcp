@@ -42,17 +42,13 @@ The extension implements `vscode.lm.registerMcpServerDefinitionProvider` with:
 
 ### 2. Multiple Server Installation Modes
 
-The extension supports three ways to run the MCP server:
+The extension includes bundled server binaries for all platforms:
 
-1. **Bundled Server** (optional): Platform-specific binaries included in extension
+- `server/win-x64/dataverse-metadata-mcp-server.exe`
+- `server/linux-x64/dataverse-metadata-mcp-server`
+- `server/osx-x64/dataverse-metadata-mcp-server`
 
-   - `server/win-x64/dataverse-metadata-mcp-server.exe`
-   - `server/linux-x64/dataverse-metadata-mcp-server`
-   - `server/osx-x64/dataverse-metadata-mcp-server`
-
-2. **Global .NET Tool**: Uses `dataverse-metadata-mcp-server` installed via `dotnet tool install`
-
-3. **Custom Path**: User-specified path via settings
+Users can optionally specify a custom server path via settings if needed.
 
 ### 3. Configuration Management
 
@@ -169,20 +165,14 @@ See [AUTOMATED-RELEASES.md](AUTOMATED-RELEASES.md) for detailed instructions.
 
 After installing the extension, users need to:
 
-1. **Install the MCP server** (if not bundled):
-
-   ```bash
-   dotnet tool install --global DataverseMetadataMcp.Server
-   ```
-
-2. **Configure connection**:
+1. **Configure connection**:
 
    - Command Palette: "Dataverse MCP: Configure Dataverse Connection"
    - Or Settings: `dataverseMetadataMcp.connectionString`
 
-3. **Restart VS Code**
+2. **Restart VS Code** (if needed)
 
-4. **Use with Copilot**:
+3. **Use with Copilot**:
    - Open any file
    - Start Copilot chat
    - Ask questions about Dataverse metadata
@@ -252,7 +242,6 @@ Check in order:
 
 1. Settings → `dataverseMetadataMcp.serverPath`
 2. Extension directory → `server/` folder
-3. Terminal: `dotnet tool list --global`
 
 ### Connection Issues
 

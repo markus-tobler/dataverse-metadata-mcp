@@ -192,15 +192,11 @@ Check the Output panel:
 The extension tries to locate the server in this order:
 
 1. Custom path from settings
-2. Bundled server in extension directory
-3. Global .NET tool
+   The extension looks for the server in the bundled server directory.
 
 Verify server availability:
 
 ```bash
-# Check global tool
-dotnet tool list --global
-
 # Check bundled server
 ls ./server/
 ```
