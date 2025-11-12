@@ -13,6 +13,10 @@ Install the **Dataverse Metadata MCP** extension from the VS Code Marketplace:
 
 The extension automatically registers the MCP server with GitHub Copilot and provides an easy-to-use configuration UI for setting up your Dataverse connection. See [vscode-extension/README.md](./vscode-extension/README.md) for details.
 
+## Usage Examples
+
+Check out the [usage examples](docs/usage-example.md) to get an idea of how you could use the Dataverse Metadata MCP server.
+
 ## Development Setup
 
 If you want to contribute or run from source:
