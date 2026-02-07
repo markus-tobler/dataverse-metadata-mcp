@@ -37,6 +37,8 @@ Example queries to try:
 
 You're working on a Power Platform project and need to document the custom data model for the **Project Management** solution. You want to generate comprehensive documentation including tables, columns, relationships, and business rules.
 
+![Usage Example](usage-example.gif)
+
 ### Conversation with GitHub Copilot
 
 **You:**
@@ -178,7 +180,6 @@ These fields exist and match the requirements:
 These fields exist but don't match requirements:
 
 1. **new_creditlimit**
-
    - **Required:** Currency with max $500,000
    - **Actual:** Currency with max $100,000
    - **Action:** Update max value constraint
@@ -193,13 +194,11 @@ These fields exist but don't match requirements:
 These required fields don't exist yet:
 
 1. **new_industry** (Choice)
-
    - Type: Choice
    - Options: Technology, Healthcare, Finance, Retail, Other
    - Required: Yes
 
 2. **new_annualrevenue** (Currency)
-
    - Type: Currency
    - Precision: 2
    - Required: No
@@ -301,7 +300,6 @@ _[Copilot calls:]_
 3. ❌ Table: `contoso_product`
    - Column: `SKU` - **Missing prefix** (should be `contoso_sku`)
 4. ❌ Table: `contoso_invoice`
-
    - Column: `contoso_DueDate` - **Incorrect casing** (should be `contoso_duedate`)
 
 5. ❌ Table: `contoso_customer`
