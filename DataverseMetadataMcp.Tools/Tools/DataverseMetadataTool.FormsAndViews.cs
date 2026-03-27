@@ -4,6 +4,7 @@ using Microsoft.Xrm.Sdk.Metadata;
 using ModelContextProtocol.Server;
 using DataverseMetadataMcp.Tools.Configuration;
 using System.ComponentModel;
+using System.Security;
 using System.Text.Json;
 
 namespace DataverseMetadataMcp.Tools.Tools;
@@ -251,6 +252,15 @@ public static partial class DataverseMetadataTool
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(tableName))
+                return JsonSerializer.Serialize(new { Error = "tableName is required and cannot be empty." }, new JsonSerializerOptions { WriteIndented = true });
+            if (string.IsNullOrWhiteSpace(viewName))
+                return JsonSerializer.Serialize(new { Error = "viewName is required and cannot be empty." }, new JsonSerializerOptions { WriteIndented = true });
+            if (string.IsNullOrWhiteSpace(fetchXml))
+                return JsonSerializer.Serialize(new { Error = "fetchXml is required and cannot be empty." }, new JsonSerializerOptions { WriteIndented = true });
+            if (string.IsNullOrWhiteSpace(layoutXml))
+                return JsonSerializer.Serialize(new { Error = "layoutXml is required and cannot be empty." }, new JsonSerializerOptions { WriteIndented = true });
+
             var serviceClient = ConfigurationHelper.GetServiceClient();
 
             var entity = new Microsoft.Xrm.Sdk.Entity("savedquery")
@@ -269,7 +279,7 @@ public static partial class DataverseMetadataTool
 
             var publishRequest = new PublishXmlRequest
             {
-                ParameterXml = $"<importexportxml><entities><entity>{tableName}</entity></entities></importexportxml>"
+                ParameterXml = $"<importexportxml><entities><entity>{SecurityElement.Escape(tableName)}</entity></entities></importexportxml>"
             };
             await serviceClient.ExecuteAsync(publishRequest);
 
@@ -331,7 +341,7 @@ public static partial class DataverseMetadataTool
 
             var publishRequest = new PublishXmlRequest
             {
-                ParameterXml = $"<importexportxml><entities><entity>{tableName}</entity></entities></importexportxml>"
+                ParameterXml = $"<importexportxml><entities><entity>{SecurityElement.Escape(tableName)}</entity></entities></importexportxml>"
             };
             await serviceClient.ExecuteAsync(publishRequest);
 
