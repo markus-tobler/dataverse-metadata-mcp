@@ -7,7 +7,7 @@ All notable changes to the "dataverse-metadata-mcp" extension will be documented
 ### Added
 
 - Create Table now supports ownership types: User, Team, and Business Unit
-- Cretae View Methods
+- Create View Methods
 
 ## [0.1.3] - 2024-11-08
 
