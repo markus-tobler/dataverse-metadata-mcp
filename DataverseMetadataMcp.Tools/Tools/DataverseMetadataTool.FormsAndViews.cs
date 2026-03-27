@@ -164,9 +164,12 @@ public static partial class DataverseMetadataTool
     /// Retrieves detailed information about a specific view
     /// </summary>
     /// <param name="viewId">The ID of the view</param>
+    /// <param name="includeXml">When true, includes full FetchXml, LayoutXml, and ColumnSetXml in the response</param>
     /// <returns>JSON string containing detailed view information</returns>
-    [McpServerTool, Description("Retrieves detailed information about a specific view from Dataverse.")]
-    public static async Task<string> ReadViewDetails(string viewId)
+    [McpServerTool, Description("Retrieves detailed information about a specific view from Dataverse. By default returns summary fields only; set includeXml=true to include the full FetchXml, LayoutXml, and ColumnSetXml.")]
+    public static async Task<string> ReadViewDetails(
+        [Description("The GUID of the view to retrieve.")] string viewId,
+        [Description("When true, includes the full FetchXml, LayoutXml, and ColumnSetXml in the response. Defaults to false.")] bool includeXml = false)
     {
         try
         {
@@ -181,6 +184,31 @@ public static partial class DataverseMetadataTool
                 "savedqueryid", "name", "description", "querytype", "returnedtypecode", "fetchxml",
                 "layoutxml", "columnsetxml", "isdefault", "ismanaged", "isquickfindquery", "isprivate"));
 
+            var fetchXml = view.GetAttributeValue<string>("fetchxml");
+            var layoutXml = view.GetAttributeValue<string>("layoutxml");
+            var columnSetXml = view.GetAttributeValue<string>("columnsetxml");
+
+            if (includeXml)
+            {
+                var viewDetailsWithXml = new
+                {
+                    SavedQueryId = view.GetAttributeValue<Guid>("savedqueryid"),
+                    Name = view.GetAttributeValue<string>("name"),
+                    Description = view.GetAttributeValue<string>("description"),
+                    QueryType = view.GetAttributeValue<int>("querytype"),
+                    QueryTypeName = GetQueryTypeName(view.GetAttributeValue<int>("querytype")),
+                    ReturnedTypeCode = view.GetAttributeValue<string>("returnedtypecode"),
+                    IsDefault = view.GetAttributeValue<bool>("isdefault"),
+                    IsManaged = view.GetAttributeValue<bool>("ismanaged"),
+                    IsQuickFindQuery = view.GetAttributeValue<bool>("isquickfindquery"),
+                    IsPrivate = view.GetAttributeValue<bool>("isprivate"),
+                    FetchXml = fetchXml,
+                    LayoutXml = layoutXml,
+                    ColumnSetXml = columnSetXml
+                };
+                return JsonSerializer.Serialize(viewDetailsWithXml, new JsonSerializerOptions { WriteIndented = true });
+            }
+
             var viewDetails = new
             {
                 SavedQueryId = view.GetAttributeValue<Guid>("savedqueryid"),
@@ -193,9 +221,12 @@ public static partial class DataverseMetadataTool
                 IsManaged = view.GetAttributeValue<bool>("ismanaged"),
                 IsQuickFindQuery = view.GetAttributeValue<bool>("isquickfindquery"),
                 IsPrivate = view.GetAttributeValue<bool>("isprivate"),
-                FetchXml = view.GetAttributeValue<string>("fetchxml"),
-                LayoutXml = view.GetAttributeValue<string>("layoutxml"),
-                ColumnSetXml = view.GetAttributeValue<string>("columnsetxml")
+                FetchXmlLength = fetchXml?.Length ?? 0,
+                HasFetchXml = !string.IsNullOrEmpty(fetchXml),
+                LayoutXmlLength = layoutXml?.Length ?? 0,
+                HasLayoutXml = !string.IsNullOrEmpty(layoutXml),
+                ColumnSetXmlLength = columnSetXml?.Length ?? 0,
+                HasColumnSetXml = !string.IsNullOrEmpty(columnSetXml)
             };
 
             return JsonSerializer.Serialize(viewDetails, new JsonSerializerOptions { WriteIndented = true });
