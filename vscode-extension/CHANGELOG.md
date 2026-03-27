@@ -2,6 +2,13 @@
 
 All notable changes to the "dataverse-metadata-mcp" extension will be documented in this file.
 
+## [0.2.0] - 2026-03-27
+
+### Added
+
+- Create Table now supports ownership types: User, Team, and Business Unit
+- Create View Methods
+
 ## [0.1.3] - 2024-11-08
 
 ### Added
