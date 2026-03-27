@@ -219,6 +219,7 @@ public static partial class DataverseMetadataTool
     /// <param name="enableMailMerge">Enable mail merge for the table (default: false)</param>
     /// <param name="enableQueues">Enable queues for the table (default: false)</param>
     /// <param name="enableBusinessProcessFlow">Enable business process flows for the table (default: false)</param>
+    /// <param name="ownershipType">Ownership type for the table: 'UserOwned' (user/team owned, default) or 'OrganizationOwned'.</param>
     /// <param name="solutionUniqueName">(Optional, lowercase) If provided, adds the new table to the specified unmanaged solution using its unique name.</param>
     /// <returns>JSON string containing the result of the table creation operation</returns>
     [McpServerTool, Description("Creates a new table (entity) in Dataverse with specified configuration options.")]
@@ -238,6 +239,7 @@ public static partial class DataverseMetadataTool
     bool enableMailMerge = false,
     bool enableQueues = false,
     bool enableBusinessProcessFlow = false,
+    string ownershipType = "UserOwned",
     string? solutionUniqueName = null)
     {
         try
@@ -265,6 +267,15 @@ public static partial class DataverseMetadataTool
             if (primaryNameMaxLength < 1 || primaryNameMaxLength > 4000)
                 return "Error: Primary name max length must be between 1 and 4000.";
 
+            // Validate and map ownership type
+            OwnershipTypes resolvedOwnershipType;
+            if (string.Equals(ownershipType, "OrganizationOwned", StringComparison.OrdinalIgnoreCase))
+                resolvedOwnershipType = OwnershipTypes.OrganizationOwned;
+            else if (string.Equals(ownershipType, "UserOwned", StringComparison.OrdinalIgnoreCase))
+                resolvedOwnershipType = OwnershipTypes.UserOwned;
+            else
+                return "Error: ownershipType must be 'UserOwned' or 'OrganizationOwned'.";
+
             // Set default primary name schema name if not provided
             if (string.IsNullOrWhiteSpace(primaryNameSchemaName))
             {
@@ -284,7 +295,7 @@ public static partial class DataverseMetadataTool
                 DisplayName = new Label(displayName, languageCode),
                 DisplayCollectionName = new Label(pluralName, languageCode),
                 Description = !string.IsNullOrWhiteSpace(description) ? new Label(description, languageCode) : null,
-                OwnershipType = OwnershipTypes.UserOwned,
+                OwnershipType = resolvedOwnershipType,
                 IsActivity = false,
                 IsAvailableOffline = true,
                 IsAuditEnabled = new BooleanManagedProperty(enableAudit),

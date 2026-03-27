@@ -1,8 +1,10 @@
+using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Metadata;
 using ModelContextProtocol.Server;
 using DataverseMetadataMcp.Tools.Configuration;
 using System.ComponentModel;
+using System.Security;
 using System.Text.Json;
 
 namespace DataverseMetadataMcp.Tools.Tools;
@@ -163,9 +165,12 @@ public static partial class DataverseMetadataTool
     /// Retrieves detailed information about a specific view
     /// </summary>
     /// <param name="viewId">The ID of the view</param>
+    /// <param name="includeXml">When true, includes full FetchXml, LayoutXml, and ColumnSetXml in the response</param>
     /// <returns>JSON string containing detailed view information</returns>
-    [McpServerTool, Description("Retrieves detailed information about a specific view from Dataverse.")]
-    public static async Task<string> ReadViewDetails(string viewId)
+    [McpServerTool, Description("Retrieves detailed information about a specific view from Dataverse. By default returns summary fields only; set includeXml=true to include the full FetchXml, LayoutXml, and ColumnSetXml.")]
+    public static async Task<string> ReadViewDetails(
+        [Description("The GUID of the view to retrieve.")] string viewId,
+        [Description("When true, includes the full FetchXml, LayoutXml, and ColumnSetXml in the response. Defaults to false.")] bool includeXml = false)
     {
         try
         {
@@ -180,6 +185,31 @@ public static partial class DataverseMetadataTool
                 "savedqueryid", "name", "description", "querytype", "returnedtypecode", "fetchxml",
                 "layoutxml", "columnsetxml", "isdefault", "ismanaged", "isquickfindquery", "isprivate"));
 
+            var fetchXml = view.GetAttributeValue<string>("fetchxml");
+            var layoutXml = view.GetAttributeValue<string>("layoutxml");
+            var columnSetXml = view.GetAttributeValue<string>("columnsetxml");
+
+            if (includeXml)
+            {
+                var viewDetailsWithXml = new
+                {
+                    SavedQueryId = view.GetAttributeValue<Guid>("savedqueryid"),
+                    Name = view.GetAttributeValue<string>("name"),
+                    Description = view.GetAttributeValue<string>("description"),
+                    QueryType = view.GetAttributeValue<int>("querytype"),
+                    QueryTypeName = GetQueryTypeName(view.GetAttributeValue<int>("querytype")),
+                    ReturnedTypeCode = view.GetAttributeValue<string>("returnedtypecode"),
+                    IsDefault = view.GetAttributeValue<bool>("isdefault"),
+                    IsManaged = view.GetAttributeValue<bool>("ismanaged"),
+                    IsQuickFindQuery = view.GetAttributeValue<bool>("isquickfindquery"),
+                    IsPrivate = view.GetAttributeValue<bool>("isprivate"),
+                    FetchXml = fetchXml,
+                    LayoutXml = layoutXml,
+                    ColumnSetXml = columnSetXml
+                };
+                return JsonSerializer.Serialize(viewDetailsWithXml, new JsonSerializerOptions { WriteIndented = true });
+            }
+
             var viewDetails = new
             {
                 SavedQueryId = view.GetAttributeValue<Guid>("savedqueryid"),
@@ -192,12 +222,12 @@ public static partial class DataverseMetadataTool
                 IsManaged = view.GetAttributeValue<bool>("ismanaged"),
                 IsQuickFindQuery = view.GetAttributeValue<bool>("isquickfindquery"),
                 IsPrivate = view.GetAttributeValue<bool>("isprivate"),
-                FetchXmlLength = view.GetAttributeValue<string>("fetchxml")?.Length ?? 0,
-                LayoutXmlLength = view.GetAttributeValue<string>("layoutxml")?.Length ?? 0,
-                ColumnSetXmlLength = view.GetAttributeValue<string>("columnsetxml")?.Length ?? 0,
-                HasFetchXml = !string.IsNullOrEmpty(view.GetAttributeValue<string>("fetchxml")),
-                HasLayoutXml = !string.IsNullOrEmpty(view.GetAttributeValue<string>("layoutxml")),
-                HasColumnSetXml = !string.IsNullOrEmpty(view.GetAttributeValue<string>("columnsetxml"))
+                FetchXmlLength = fetchXml?.Length ?? 0,
+                HasFetchXml = !string.IsNullOrEmpty(fetchXml),
+                LayoutXmlLength = layoutXml?.Length ?? 0,
+                HasLayoutXml = !string.IsNullOrEmpty(layoutXml),
+                ColumnSetXmlLength = columnSetXml?.Length ?? 0,
+                HasColumnSetXml = !string.IsNullOrEmpty(columnSetXml)
             };
 
             return JsonSerializer.Serialize(viewDetails, new JsonSerializerOptions { WriteIndented = true });
@@ -205,6 +235,133 @@ public static partial class DataverseMetadataTool
         catch (Exception ex)
         {
             return $"Error retrieving view details: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Creates a new system view (savedquery) for a specific table in Dataverse.
+    /// </summary>
+    [McpServerTool, Description("Creates a new system view for a specific table in Dataverse. Provide FetchXML for the query and LayoutXML for the column layout. QueryType: 0=MainApplicationView, 1=AdvancedFind, 2=SubGrid, 4=QuickFind, 8=Lookup.")]
+    public static async Task<string> CreateView(
+        [Description("The logical name of the table the view belongs to (e.g. 'account').")] string tableName,
+        [Description("The display name of the new view.")] string viewName,
+        [Description("The FetchXML query that defines which records and columns to retrieve.")] string fetchXml,
+        [Description("The LayoutXML that defines the column layout for the view.")] string layoutXml,
+        [Description("Optional description of the view.")] string? description = null,
+        [Description("Optional query type. Defaults to 0 (MainApplicationView).")] int queryType = 0)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(tableName))
+                return JsonSerializer.Serialize(new { Error = "tableName is required and cannot be empty." }, new JsonSerializerOptions { WriteIndented = true });
+            if (string.IsNullOrWhiteSpace(viewName))
+                return JsonSerializer.Serialize(new { Error = "viewName is required and cannot be empty." }, new JsonSerializerOptions { WriteIndented = true });
+            if (string.IsNullOrWhiteSpace(fetchXml))
+                return JsonSerializer.Serialize(new { Error = "fetchXml is required and cannot be empty." }, new JsonSerializerOptions { WriteIndented = true });
+            if (string.IsNullOrWhiteSpace(layoutXml))
+                return JsonSerializer.Serialize(new { Error = "layoutXml is required and cannot be empty." }, new JsonSerializerOptions { WriteIndented = true });
+
+            var serviceClient = ConfigurationHelper.GetServiceClient();
+
+            var entity = new Microsoft.Xrm.Sdk.Entity("savedquery")
+            {
+                ["name"] = viewName,
+                ["returnedtypecode"] = tableName,
+                ["fetchxml"] = fetchXml,
+                ["layoutxml"] = layoutXml,
+                ["querytype"] = queryType
+            };
+
+            if (description != null)
+                entity["description"] = description;
+
+            var viewId = await serviceClient.CreateAsync(entity);
+
+            var publishRequest = new PublishXmlRequest
+            {
+                ParameterXml = $"<importexportxml><entities><entity>{SecurityElement.Escape(tableName)}</entity></entities></importexportxml>"
+            };
+            await serviceClient.ExecuteAsync(publishRequest);
+
+            return JsonSerializer.Serialize(new
+            {
+                Success = true,
+                SavedQueryId = viewId,
+                Name = viewName,
+                TableName = tableName,
+                QueryType = queryType,
+                QueryTypeName = GetQueryTypeName(queryType),
+                Message = "View created and published successfully."
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return $"Error creating view: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Updates an existing system view (savedquery) in Dataverse.
+    /// </summary>
+    [McpServerTool, Description("Updates an existing system view in Dataverse. Only the provided parameters will be updated. Call ReadViewDetails first to retrieve the current FetchXML and LayoutXML before making modifications.")]
+    public static async Task<string> UpdateView(
+        [Description("The GUID of the view to update.")] string viewId,
+        [Description("New display name for the view.")] string? name = null,
+        [Description("New description for the view.")] string? description = null,
+        [Description("New FetchXML query for the view.")] string? fetchXml = null,
+        [Description("New LayoutXML for the view column layout.")] string? layoutXml = null)
+    {
+        try
+        {
+            var serviceClient = ConfigurationHelper.GetServiceClient();
+
+            if (!Guid.TryParse(viewId, out var viewGuid))
+                return JsonSerializer.Serialize(new { Error = "Invalid view ID format" }, new JsonSerializerOptions { WriteIndented = true });
+
+            if (name == null && description == null && fetchXml == null && layoutXml == null)
+                return JsonSerializer.Serialize(new { Error = "At least one field to update must be provided (name, description, fetchXml, or layoutXml)." }, new JsonSerializerOptions { WriteIndented = true });
+
+            // Retrieve existing view to get the table name for publishing
+            var existing = await serviceClient.RetrieveAsync("savedquery", viewGuid,
+                new Microsoft.Xrm.Sdk.Query.ColumnSet("returnedtypecode"));
+            var tableName = existing.GetAttributeValue<string>("returnedtypecode");
+
+            var entity = new Microsoft.Xrm.Sdk.Entity("savedquery") { Id = viewGuid };
+
+            if (name != null)
+                entity["name"] = name;
+            if (description != null)
+                entity["description"] = description;
+            if (fetchXml != null)
+                entity["fetchxml"] = fetchXml;
+            if (layoutXml != null)
+                entity["layoutxml"] = layoutXml;
+
+            await serviceClient.UpdateAsync(entity);
+
+            var publishRequest = new PublishXmlRequest
+            {
+                ParameterXml = $"<importexportxml><entities><entity>{SecurityElement.Escape(tableName)}</entity></entities></importexportxml>"
+            };
+            await serviceClient.ExecuteAsync(publishRequest);
+
+            var updatedFields = new List<string>();
+            if (name != null) updatedFields.Add("Name");
+            if (description != null) updatedFields.Add("Description");
+            if (fetchXml != null) updatedFields.Add("FetchXml");
+            if (layoutXml != null) updatedFields.Add("LayoutXml");
+
+            return JsonSerializer.Serialize(new
+            {
+                Success = true,
+                SavedQueryId = viewGuid,
+                UpdatedFields = updatedFields,
+                Message = "View updated and published successfully."
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return $"Error updating view: {ex.Message}";
         }
     }
 
