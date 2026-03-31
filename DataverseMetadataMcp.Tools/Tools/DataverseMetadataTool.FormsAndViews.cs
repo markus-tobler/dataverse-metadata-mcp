@@ -465,14 +465,13 @@ public static partial class DataverseMetadataTool
     {
         try
         {
-            var serviceClient = ConfigurationHelper.GetServiceClient();
-
             if (!Guid.TryParse(formId, out var formGuid))
                 return JsonSerializer.Serialize(new { Error = "Invalid form ID format" }, new JsonSerializerOptions { WriteIndented = true });
 
             if (name == null && description == null && formXml == null)
                 return JsonSerializer.Serialize(new { Error = "At least one field to update must be provided (name, description, or formXml)." }, new JsonSerializerOptions { WriteIndented = true });
 
+            var serviceClient = ConfigurationHelper.GetServiceClient();
             // Retrieve existing form to get the table name for publishing
             var existing = await serviceClient.RetrieveAsync("systemform", formGuid,
                 new Microsoft.Xrm.Sdk.Query.ColumnSet("objecttypecode"));
