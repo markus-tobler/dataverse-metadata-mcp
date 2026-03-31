@@ -512,7 +512,10 @@ public static partial class DataverseMetadataTool
         }
         catch (Exception ex)
         {
-            return $"Error updating form: {ex.Message}";
+            return JsonSerializer.Serialize(new
+            {
+                Error = $"Error updating form: {ex.Message}"
+            }, new JsonSerializerOptions { WriteIndented = true });
         }
     }
 
