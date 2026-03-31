@@ -449,7 +449,10 @@ public static partial class DataverseMetadataTool
         }
         catch (Exception ex)
         {
-            return $"Error creating form: {ex.Message}";
+            return JsonSerializer.Serialize(new
+            {
+                Error = $"Error creating form: {ex.Message}"
+            }, new JsonSerializerOptions { WriteIndented = true });
         }
     }
 
