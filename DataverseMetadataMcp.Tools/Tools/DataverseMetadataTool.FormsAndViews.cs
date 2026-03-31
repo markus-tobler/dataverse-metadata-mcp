@@ -118,9 +118,12 @@ public static partial class DataverseMetadataTool
     /// Retrieves detailed information about a specific form
     /// </summary>
     /// <param name="formId">The ID of the form</param>
+    /// <param name="includeXml">When true, includes the full FormXml in the response</param>
     /// <returns>JSON string containing detailed form information</returns>
-    [McpServerTool, Description("Retrieves detailed information about a specific form from Dataverse.")]
-    public static async Task<string> ReadFormDetails(string formId)
+    [McpServerTool, Description("Retrieves detailed information about a specific form from Dataverse. By default returns summary fields only; set includeXml=true to include the full FormXml.")]
+    public static async Task<string> ReadFormDetails(
+        [Description("The GUID of the form to retrieve.")] string formId,
+        [Description("When true, includes the full FormXml in the response. Defaults to false.")] bool includeXml = false)
     {
         try
         {
@@ -134,6 +137,29 @@ public static partial class DataverseMetadataTool
             var form = await serviceClient.RetrieveAsync("systemform", formGuid, new Microsoft.Xrm.Sdk.Query.ColumnSet(
                 "formid", "name", "description", "type", "objecttypecode", "formxml", "istabletenabled",
                 "ismanaged", "formactivationstate", "version", "introducedversion"));
+
+            var formXml = form.GetAttributeValue<string>("formxml");
+
+            if (includeXml)
+            {
+                var formDetailsWithXml = new
+                {
+                    FormId = form.GetAttributeValue<Guid>("formid"),
+                    Name = form.GetAttributeValue<string>("name"),
+                    Description = form.GetAttributeValue<string>("description"),
+                    Type = form.GetAttributeValue<Microsoft.Xrm.Sdk.OptionSetValue>("type")?.Value,
+                    TypeName = GetFormTypeName(form.GetAttributeValue<Microsoft.Xrm.Sdk.OptionSetValue>("type")?.Value ?? 0),
+                    ObjectTypeCode = form.GetAttributeValue<string>("objecttypecode"),
+                    IsTabletEnabled = form.GetAttributeValue<bool>("istabletenabled"),
+                    IsManaged = form.GetAttributeValue<bool>("ismanaged"),
+                    FormActivationState = form.GetAttributeValue<Microsoft.Xrm.Sdk.OptionSetValue>("formactivationstate")?.Value,
+                    ActivationStateName = GetFormActivationStateName(form.GetAttributeValue<Microsoft.Xrm.Sdk.OptionSetValue>("formactivationstate")?.Value ?? 0),
+                    Version = form.GetAttributeValue<string>("version"),
+                    IntroducedVersion = form.GetAttributeValue<string>("introducedversion"),
+                    FormXml = formXml
+                };
+                return JsonSerializer.Serialize(formDetailsWithXml, new JsonSerializerOptions { WriteIndented = true });
+            }
 
             var formDetails = new
             {
@@ -149,8 +175,8 @@ public static partial class DataverseMetadataTool
                 ActivationStateName = GetFormActivationStateName(form.GetAttributeValue<Microsoft.Xrm.Sdk.OptionSetValue>("formactivationstate")?.Value ?? 0),
                 Version = form.GetAttributeValue<string>("version"),
                 IntroducedVersion = form.GetAttributeValue<string>("introducedversion"),
-                FormXmlLength = form.GetAttributeValue<string>("formxml")?.Length ?? 0,
-                HasFormXml = !string.IsNullOrEmpty(form.GetAttributeValue<string>("formxml"))
+                FormXmlLength = formXml?.Length ?? 0,
+                HasFormXml = !string.IsNullOrEmpty(formXml)
             };
 
             return JsonSerializer.Serialize(formDetails, new JsonSerializerOptions { WriteIndented = true });
@@ -366,36 +392,155 @@ public static partial class DataverseMetadataTool
     }
 
     /// <summary>
+    /// Creates a new system form for a specific table in Dataverse.
+    /// </summary>
+    [McpServerTool, Description("Creates a new system form for a specific table in Dataverse. Provide FormXML for the layout. FormType: 2=Main (default), 6=QuickViewForm, 7=QuickCreate. Call ReadFormDetails with includeXml=true on an existing form to get a FormXML template.")]
+    public static async Task<string> CreateForm(
+        [Description("The logical name of the table the form belongs to (e.g. 'account').")] string tableName,
+        [Description("The display name of the new form.")] string formName,
+        [Description("The FormXML that defines the form layout. Must be a valid XML string with a <form> root element.")] string formXml,
+        [Description("Optional description of the form.")] string? description = null,
+        [Description("Form type integer. Defaults to 2 (Main). Common values: 2=Main, 6=QuickViewForm, 7=QuickCreate.")] int formType = 2,
+        [Description("Whether the form is enabled for desktop. Defaults to true.")] bool isDesktopEnabled = true,
+        [Description("Whether the form is enabled for tablets. Defaults to false.")] bool isTabletEnabled = false)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(tableName))
+                return JsonSerializer.Serialize(new { Error = "tableName is required and cannot be empty." }, new JsonSerializerOptions { WriteIndented = true });
+            if (string.IsNullOrWhiteSpace(formName))
+                return JsonSerializer.Serialize(new { Error = "formName is required and cannot be empty." }, new JsonSerializerOptions { WriteIndented = true });
+            if (string.IsNullOrWhiteSpace(formXml))
+                return JsonSerializer.Serialize(new { Error = "formXml is required and cannot be empty." }, new JsonSerializerOptions { WriteIndented = true });
+
+            var serviceClient = ConfigurationHelper.GetServiceClient();
+
+            var entity = new Microsoft.Xrm.Sdk.Entity("systemform")
+            {
+                ["name"] = formName,
+                ["objecttypecode"] = tableName,
+                ["formxml"] = formXml,
+                ["type"] = new Microsoft.Xrm.Sdk.OptionSetValue(formType),
+                ["isdesktopenabled"] = isDesktopEnabled,
+                ["istabletenabled"] = isTabletEnabled
+            };
+
+            if (description != null)
+                entity["description"] = description;
+
+            var formId = await serviceClient.CreateAsync(entity);
+
+            var publishRequest = new PublishXmlRequest
+            {
+                ParameterXml = $"<importexportxml><entities><entity>{SecurityElement.Escape(tableName)}</entity></entities></importexportxml>"
+            };
+            await serviceClient.ExecuteAsync(publishRequest);
+
+            return JsonSerializer.Serialize(new
+            {
+                Success = true,
+                FormId = formId,
+                Name = formName,
+                TableName = tableName,
+                FormType = formType,
+                FormTypeName = GetFormTypeName(formType),
+                Message = "Form created and published successfully."
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return $"Error creating form: {ex.Message}";
+        }
+    }
+
+    /// <summary>
+    /// Updates an existing system form in Dataverse.
+    /// </summary>
+    [McpServerTool, Description("Updates an existing system form in Dataverse. Only the provided parameters will be updated. Call ReadFormDetails with includeXml=true first to retrieve the current FormXml before making modifications.")]
+    public static async Task<string> UpdateForm(
+        [Description("The GUID of the form to update.")] string formId,
+        [Description("New display name for the form.")] string? name = null,
+        [Description("New description for the form.")] string? description = null,
+        [Description("New FormXML for the form layout.")] string? formXml = null)
+    {
+        try
+        {
+            var serviceClient = ConfigurationHelper.GetServiceClient();
+
+            if (!Guid.TryParse(formId, out var formGuid))
+                return JsonSerializer.Serialize(new { Error = "Invalid form ID format" }, new JsonSerializerOptions { WriteIndented = true });
+
+            if (name == null && description == null && formXml == null)
+                return JsonSerializer.Serialize(new { Error = "At least one field to update must be provided (name, description, or formXml)." }, new JsonSerializerOptions { WriteIndented = true });
+
+            // Retrieve existing form to get the table name for publishing
+            var existing = await serviceClient.RetrieveAsync("systemform", formGuid,
+                new Microsoft.Xrm.Sdk.Query.ColumnSet("objecttypecode"));
+            var tableName = existing.GetAttributeValue<string>("objecttypecode");
+
+            var entity = new Microsoft.Xrm.Sdk.Entity("systemform") { Id = formGuid };
+
+            if (name != null)
+                entity["name"] = name;
+            if (description != null)
+                entity["description"] = description;
+            if (formXml != null)
+                entity["formxml"] = formXml;
+
+            await serviceClient.UpdateAsync(entity);
+
+            var publishRequest = new PublishXmlRequest
+            {
+                ParameterXml = $"<importexportxml><entities><entity>{SecurityElement.Escape(tableName)}</entity></entities></importexportxml>"
+            };
+            await serviceClient.ExecuteAsync(publishRequest);
+
+            var updatedFields = new List<string>();
+            if (name != null) updatedFields.Add("Name");
+            if (description != null) updatedFields.Add("Description");
+            if (formXml != null) updatedFields.Add("FormXml");
+
+            return JsonSerializer.Serialize(new
+            {
+                Success = true,
+                FormId = formGuid,
+                UpdatedFields = updatedFields,
+                Message = "Form updated and published successfully."
+            }, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch (Exception ex)
+        {
+            return $"Error updating form: {ex.Message}";
+        }
+    }
+
+    /// <summary>
     /// Gets a human-readable name for form type values
     /// </summary>
     /// <param name="formType">The form type value</param>
     /// <returns>A descriptive string of the form type</returns>
-    private static string GetFormTypeName(int formType)
+    private static string GetFormTypeName(int formType) => formType switch
     {
-        return formType switch
-        {
-            1 => "Create",
-            2 => "Update",
-            3 => "ReadOnly",
-            4 => "Admin",
-            5 => "BulkEdit",
-            6 => "ReadOnlyGrid",
-            7 => "Associated",
-            8 => "QuickViewForm",
-            9 => "QuickCreate",
-            10 => "Dialog",
-            11 => "TaskBasedFlow",
-            12 => "InteractionCentricDashboard",
-            13 => "Card",
-            14 => "Main - Interactive experience",
-            15 => "ContextualDashboard",
-            16 => "Other",
-            17 => "MainBackup",
-            18 => "AppointmentBook",
-            19 => "Mobile - Express",
-            _ => $"Unknown ({formType})"
-        };
-    }
+        0 => "Dashboard",
+        1 => "AppointmentBook",
+        2 => "Main",
+        3 => "MiniCampaignBO",
+        4 => "Preview",
+        5 => "Mobile - Express",
+        6 => "QuickViewForm",
+        7 => "QuickCreate",
+        8 => "Dialog",
+        9 => "TaskFlowForm",
+        10 => "InteractionCentricDashboard",
+        11 => "Card",
+        12 => "Main - Interactive experience",
+        13 => "ContextualDashboard",
+        100 => "Other",
+        101 => "MainBackup",
+        102 => "AppointmentBookBackup",
+        103 => "Power BI Dashboard",
+        _ => $"Unknown ({formType})"
+    };
 
     /// <summary>
     /// Gets a human-readable name for form activation state values
