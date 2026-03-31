@@ -413,6 +413,17 @@ public static partial class DataverseMetadataTool
             if (string.IsNullOrWhiteSpace(formXml))
                 return JsonSerializer.Serialize(new { Error = "formXml is required and cannot be empty." }, new JsonSerializerOptions { WriteIndented = true });
 
+            try
+            {
+                var xmlDoc = System.Xml.Linq.XDocument.Parse(formXml);
+                if (xmlDoc.Root?.Name.LocalName != "form")
+                    return JsonSerializer.Serialize(new { Error = "formXml must have a <form> root element." }, new JsonSerializerOptions { WriteIndented = true });
+            }
+            catch (System.Xml.XmlException xmlEx)
+            {
+                return JsonSerializer.Serialize(new { Error = $"formXml is not valid XML: {xmlEx.Message}" }, new JsonSerializerOptions { WriteIndented = true });
+            }
+
             var serviceClient = ConfigurationHelper.GetServiceClient();
 
             var entity = new Microsoft.Xrm.Sdk.Entity("systemform")
@@ -473,6 +484,20 @@ public static partial class DataverseMetadataTool
 
             if (name == null && description == null && formXml == null)
                 return JsonSerializer.Serialize(new { Error = "At least one field to update must be provided (name, description, or formXml)." }, new JsonSerializerOptions { WriteIndented = true });
+
+            if (formXml != null)
+            {
+                try
+                {
+                    var xmlDoc = System.Xml.Linq.XDocument.Parse(formXml);
+                    if (xmlDoc.Root?.Name.LocalName != "form")
+                        return JsonSerializer.Serialize(new { Error = "formXml must have a <form> root element." }, new JsonSerializerOptions { WriteIndented = true });
+                }
+                catch (System.Xml.XmlException xmlEx)
+                {
+                    return JsonSerializer.Serialize(new { Error = $"formXml is not valid XML: {xmlEx.Message}" }, new JsonSerializerOptions { WriteIndented = true });
+                }
+            }
 
             var serviceClient = ConfigurationHelper.GetServiceClient();
             // Retrieve existing form to get the table name for publishing
