@@ -6,7 +6,7 @@ All notable changes to the "dataverse-metadata-mcp" extension will be documented
 
 ### Added
 
-- Create Form and Update Form now supports creating and updating model-driven forms in Dataverse
+- Create Form and Update Form now support creating and updating model-driven forms in Dataverse.
 
 ## [0.2.0] - 2026-03-27
 
