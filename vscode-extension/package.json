@@ -2,7 +2,7 @@
   "name": "dataverse-metadata-mcp",
   "displayName": "Dataverse Metadata MCP Server",
   "description": "MCP server for accessing Power Platform Dataverse metadata through GitHub Copilot",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "markus-tobler",
   "repository": {
     "type": "git",
